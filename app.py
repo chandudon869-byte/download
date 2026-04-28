@@ -4,29 +4,29 @@ import yt_dlp
 import os
 
 app = Flask(__name__)
-CORS(app)  # allow requests from apps/web
+CORS(app)
 
-# ✅ Home route (to avoid "URL not found")
-@app.route('/')
+@app.route("/")
 def home():
     return "Server is running ✅"
 
-# ✅ Download API
-@app.route('/download', methods=['GET', 'POST'])
+@app.route("/download", methods=["GET", "POST"])
 def download():
-    # Optional GET for testing in browser
+
+    # For browser test
     if request.method == "GET":
-        return "Send POST request with JSON: { \"url\": \"video_link\" }"
+        return "Use POST with JSON: {url: video_link}"
 
     data = request.get_json()
+
     if not data or "url" not in data:
         return jsonify({"error": "No URL provided"}), 400
 
-    url = data.get("url")
+    url = data["url"]
 
     ydl_opts = {
-        'quiet': True,
-        'format': 'best'
+        "quiet": True,
+        "format": "best"
     }
 
     try:
@@ -43,6 +43,8 @@ def download():
         return jsonify({"error": str(e)}), 500
 
 
-# ✅ Run properly on Render
-if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+if __name__ == "__main__":
+    app.run(
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 5000))
+    )
