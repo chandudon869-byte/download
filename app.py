@@ -7,7 +7,7 @@ CORS(app)
 
 @app.route("/")
 def home():
-    return "Metadata API running ✅"
+    return "API Running ✅"
 
 @app.route("/info", methods=["POST"])
 def info():
@@ -24,20 +24,35 @@ def info():
 
     ydl_opts = {
         "quiet": True,
-        "skip_download": True,
-        "noplaylist": True
+        "noplaylist": True,
+        "skip_download": True
     }
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             video = ydl.extract_info(url, download=False)
 
+        qualities = []
+
+        for f in video.get("formats", []):
+
+            file_url = f.get("url")
+
+            if not file_url:
+                continue
+
+            qualities.append({
+                "quality": f.get("format_note") or "Unknown",
+                "ext": f.get("ext"),
+                "url": file_url
+            })
+
         return jsonify({
             "status": "ok",
             "title": video.get("title"),
             "thumbnail": video.get("thumbnail"),
             "duration": video.get("duration"),
-            "source": video.get("extractor")
+            "qualities": qualities[:10]
         })
 
     except Exception as e:
@@ -48,4 +63,4 @@ def info():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run()
