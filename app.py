@@ -5,10 +5,6 @@ import yt_dlp
 app = Flask(__name__)
 CORS(app)
 
-@app.route("/")
-def home():
-    return "API Running ✅"
-
 @app.route("/info", methods=["POST"])
 def info():
 
@@ -24,17 +20,29 @@ def info():
 
     ydl_opts = {
         "quiet": True,
+        "skip_download": True,
         "noplaylist": True,
-        "skip_download": True
+        "nocheckcertificate": True,
+        "ignoreerrors": True,
+        "no_warnings": True
     }
 
     try:
+
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             video = ydl.extract_info(url, download=False)
 
+        if not video:
+            return jsonify({
+                "status": "failed",
+                "error": "Could not fetch video"
+            }), 500
+
         qualities = []
 
-        for f in video.get("formats", []):
+        formats = video.get("formats") or []
+
+        for f in formats:
 
             file_url = f.get("url")
 
@@ -56,6 +64,9 @@ def info():
         })
 
     except Exception as e:
+
+        print("SERVER ERROR:", str(e))
+
         return jsonify({
             "status": "failed",
             "error": str(e)
