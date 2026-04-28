@@ -1,50 +1,38 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import yt_dlp
-import os
 
 app = Flask(__name__)
 CORS(app)
 
 @app.route("/")
 def home():
-    return "Server is running ✅"
+    return "Stable API running ✅"
 
-@app.route("/download", methods=["GET", "POST"])
-def download():
-
-    # For browser test
-    if request.method == "GET":
-        return "Use POST with JSON: {url: video_link}"
+@app.route("/info", methods=["POST"])
+def info():
 
     data = request.get_json()
+    url = data.get("url")
 
-    if not data or "url" not in data:
-        return jsonify({"error": "No URL provided"}), 400
-
-    url = data["url"]
+    if not url:
+        return jsonify({"error": "No URL"}), 400
 
     ydl_opts = {
         "quiet": True,
-        "format": "best"
+        "noplaylist": True,
     }
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
 
-            return jsonify({
-                "title": info.get("title"),
-                "video_url": info.get("url"),
-                "thumbnail": info.get("thumbnail")
-            })
+        return jsonify({
+            "title": info.get("title"),
+            "thumbnail": info.get("thumbnail"),
+            "duration": info.get("duration"),
+            "source": "ok"
+        })
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-
-if __name__ == "__main__":
-    app.run(
-        host="0.0.0.0",
-        port=int(os.environ.get("PORT", 5000))
-    )
