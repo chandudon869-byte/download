@@ -1,0 +1,4 @@
+ydl_opts = {
+    "quiet": True,
+    "cookiefile": "cookies.txt"
+}
