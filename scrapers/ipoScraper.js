@@ -1,8 +1,27 @@
 const axios = require("axios");
 const cheerio = require("cheerio");
+const http = require("http");
+const https = require("https");
+
+// HTTP/HTTPS agents with connection pooling
+const httpAgent = new http.Agent({ 
+  keepAlive: true, 
+  maxSockets: 5, 
+  maxFreeSockets: 2,
+  timeout: 30000 
+});
+
+const httpsAgent = new https.Agent({ 
+  keepAlive: true, 
+  maxSockets: 5, 
+  maxFreeSockets: 2,
+  timeout: 30000 
+});
 
 let client = axios.create({
-  timeout: 15000
+  timeout: 30000,
+  httpAgent,
+  httpsAgent
 });
 
 try {
@@ -14,7 +33,9 @@ try {
     axios.create({
       jar,
       withCredentials: true,
-      timeout: 15000
+      timeout: 30000,
+      httpAgent,
+      httpsAgent
     })
   );
 } catch (err) {
@@ -123,6 +144,54 @@ function parseMaybeJson(data) {
   return [];
 }
 
+/**
+ * Retry logic with exponential backoff
+ */
+async function retryWithBackoff(fn, maxRetries = 3, baseDelay = 1000) {
+  let lastError;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`🔄 Attempt ${attempt}/${maxRetries}...`);
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      const isTimeout = err.code === "ECONNABORTED" || err.code === "ETIMEDOUT" || err.code === "ENOTFOUND";
+      const isNetworkError = err.code === "ECONNREFUSED" || err.code === "ENETUNREACH";
+      
+      // Only retry on network/timeout errors
+      if (!isTimeout && !isNetworkError) {
+        throw err; // Don't retry on other errors
+      }
+      
+      if (attempt < maxRetries) {
+        const delay = baseDelay * Math.pow(2, attempt - 1); // Exponential backoff
+        console.warn(`⚠️ Timeout/Network error on attempt ${attempt}. Retrying in ${delay}ms...`);
+        console.warn(`⚠️ Error: ${err.message}`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  
+  throw new Error(`Failed after ${maxRetries} retries: ${lastError?.message}`);
+}
+
+/**
+ * Establish session with retry logic
+ */
+async function establishSession() {
+  return retryWithBackoff(async () => {
+    console.log("📡 Establishing session with merolagani.com...");
+    await client.get("https://merolagani.com/", {
+      timeout: 30000,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+      }
+    });
+    console.log("✅ Session established successfully");
+  }, 3, 2000);
+}
+
 async function scrapeStockEvents(fromDate, toDate) {
   try {
     if (!fromDate || !toDate) {
@@ -143,23 +212,24 @@ async function scrapeStockEvents(fromDate, toDate) {
 
     console.log("🔍 Scraping from:", formatDate(fromDate), "to:", formatDate(toDate));
 
-    // First request to establish session
-    await client.get("https://merolagani.com/", {
-      timeout: 10000
-    });
+    // Establish session first with retry
+    await establishSession();
 
-    // Make API request
-    const { data } = await client.get(url, {
-      params,
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
-        Accept: "application/json, text/plain, */*",
-        Referer: "https://merolagani.com/",
-        "X-Requested-With": "XMLHttpRequest"
-      },
-      timeout: 10000
-    });
+    // Make API request with retry logic
+    const { data } = await retryWithBackoff(async () => {
+      console.log("📊 Fetching stock events from API...");
+      return await client.get(url, {
+        params,
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
+          Accept: "application/json, text/plain, */*",
+          Referer: "https://merolagani.com/",
+          "X-Requested-With": "XMLHttpRequest",
+          Connection: "keep-alive"
+        },
+        timeout: 30000
+      });
+    }, 3, 2000);
 
     console.log("📊 Raw API response type:", typeof data);
     console.log("📊 Raw API response length:", JSON.stringify(data).length);
