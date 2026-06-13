@@ -1,0 +1,15 @@
+name: OpenRouter Config
+version: 1.0.0
+schema: v1
+
+models:
+  - name: gpt-oss-20b
+    provider: openai
+    model: openai/gpt-oss-20b:free
+    apiBase: https://openrouter.ai/api/v1
+    apiKey: $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
+    roles:
+      - chat
+      - edit
+      - apply
+      - autocomplete
