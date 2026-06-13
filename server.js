@@ -3,6 +3,7 @@ require("dotenv").config(); // IMPORTANT (local dev support)
 const app = require("./app");
 const { startCron } = require("./jobs/cronJob");
 const { ensureSchema } = require("./db/ensureSchema");
+const { syncAllEvents } = require("./services/syncService");
 
 const PORT = process.env.PORT || 3000;
 
@@ -30,6 +31,15 @@ async function startServer() {
     
     // Small delay to ensure schema is fully committed
     await new Promise(resolve => setTimeout(resolve, 500));
+
+    // 🔄 SYNC DATA ON STARTUP
+    console.log("🔄 Syncing NEPSE data on startup...");
+    try {
+      const syncResult = await syncAllEvents();
+      console.log("✅ Startup Sync Complete:", syncResult);
+    } catch (syncErr) {
+      console.warn("⚠️ Startup sync failed (non-fatal):", syncErr.message);
+    }
     
   } catch (err) {
     console.error("❌ FATAL: Schema initialization failed:", err.message);
