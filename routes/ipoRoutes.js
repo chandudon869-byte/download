@@ -11,11 +11,11 @@ function serializeEvent(row) {
     };
 }
 
-// Get IPOs
+// Get IPOs - Fixed to show only upcoming dates
 async function getIPOs(req, res) {
     try {
         const result = await db.query(
-            "SELECT * FROM upcoming_ipos WHERE UPPER(issue_type) = 'IPO' ORDER BY open_date ASC"
+            "SELECT * FROM upcoming_ipos WHERE UPPER(issue_type) = 'IPO' AND open_date >= CURRENT_DATE ORDER BY open_date ASC"
         );
         res.json({
             success: true,
@@ -28,15 +28,15 @@ async function getIPOs(req, res) {
     }
 }
 
-// Get Dividends
+// Get Dividends - Fixed to show only upcoming dates
 async function getDividends(req, res) {
     try {
         let result = await db.query(
-            "SELECT * FROM upcoming_ipos WHERE UPPER(issue_type) = 'DIVIDEND' ORDER BY updated_at DESC"
+            "SELECT * FROM upcoming_ipos WHERE UPPER(issue_type) = 'DIVIDEND' AND (open_date IS NULL OR open_date >= CURRENT_DATE) ORDER BY open_date ASC NULLS LAST, updated_at DESC"
         );
         if (result.rows.length === 0) {
             result = await db.query(
-                "SELECT *, type AS issue_type FROM stock_events WHERE UPPER(type) = 'DIVIDEND' ORDER BY date DESC NULLS LAST, updated_at DESC"
+                "SELECT *, type AS issue_type FROM stock_events WHERE UPPER(type) = 'DIVIDEND' AND (date IS NULL OR date >= CURRENT_DATE) ORDER BY date ASC NULLS LAST, updated_at DESC"
             );
         }
         res.json({
@@ -50,15 +50,15 @@ async function getDividends(req, res) {
     }
 }
 
-// Get Bonus
+// Get Bonus - Fixed to show only upcoming dates
 async function getBonus(req, res) {
     try {
         let result = await db.query(
-            "SELECT * FROM upcoming_ipos WHERE UPPER(issue_type) = 'BONUS' ORDER BY updated_at DESC"
+            "SELECT * FROM upcoming_ipos WHERE UPPER(issue_type) = 'BONUS' AND (open_date IS NULL OR open_date >= CURRENT_DATE) ORDER BY open_date ASC NULLS LAST, updated_at DESC"
         );
         if (result.rows.length === 0) {
             result = await db.query(
-                "SELECT *, type AS issue_type FROM stock_events WHERE UPPER(type) = 'BONUS' ORDER BY date DESC NULLS LAST, updated_at DESC"
+                "SELECT *, type AS issue_type FROM stock_events WHERE UPPER(type) = 'BONUS' AND (date IS NULL OR date >= CURRENT_DATE) ORDER BY date ASC NULLS LAST, updated_at DESC"
             );
         }
         res.json({
@@ -72,15 +72,15 @@ async function getBonus(req, res) {
     }
 }
 
-// Get Right Share
+// Get Right Share - Fixed to show only upcoming dates
 async function getRightShare(req, res) {
     try {
         let result = await db.query(
-            "SELECT * FROM upcoming_ipos WHERE UPPER(issue_type) = 'RIGHT_SHARE' ORDER BY updated_at DESC"
+            "SELECT * FROM upcoming_ipos WHERE UPPER(issue_type) = 'RIGHT_SHARE' AND (open_date IS NULL OR open_date >= CURRENT_DATE) ORDER BY open_date ASC NULLS LAST, updated_at DESC"
         );
         if (result.rows.length === 0) {
             result = await db.query(
-                "SELECT *, type AS issue_type FROM stock_events WHERE UPPER(type) = 'RIGHT_SHARE' ORDER BY date DESC NULLS LAST, updated_at DESC"
+                "SELECT *, type AS issue_type FROM stock_events WHERE UPPER(type) = 'RIGHT_SHARE' AND (date IS NULL OR date >= CURRENT_DATE) ORDER BY date ASC NULLS LAST, updated_at DESC"
             );
         }
         res.json({
@@ -94,15 +94,15 @@ async function getRightShare(req, res) {
     }
 }
 
-// Get AGM
+// Get AGM - Fixed to show only upcoming dates
 async function getAgm(req, res) {
     try {
         let result = await db.query(
-            "SELECT * FROM upcoming_ipos WHERE UPPER(issue_type) = 'AGM' ORDER BY updated_at DESC"
+            "SELECT * FROM upcoming_ipos WHERE UPPER(issue_type) = 'AGM' AND (open_date IS NULL OR open_date >= CURRENT_DATE) ORDER BY open_date ASC NULLS LAST, updated_at DESC"
         );
         if (result.rows.length === 0) {
             result = await db.query(
-                "SELECT *, type AS issue_type FROM stock_events WHERE UPPER(type) = 'AGM' ORDER BY date DESC NULLS LAST, updated_at DESC"
+                "SELECT *, type AS issue_type FROM stock_events WHERE UPPER(type) = 'AGM' AND (date IS NULL OR date >= CURRENT_DATE) ORDER BY date ASC NULLS LAST, updated_at DESC"
             );
         }
         res.json({
@@ -116,11 +116,11 @@ async function getAgm(req, res) {
     }
 }
 
-// Get all events
+// Get all events - Fixed to show only upcoming dates
 async function getAllEvents(req, res) {
     try {
         const result = await db.query(
-            "SELECT * FROM upcoming_ipos ORDER BY updated_at DESC"
+            "SELECT * FROM upcoming_ipos WHERE open_date IS NULL OR open_date >= CURRENT_DATE ORDER BY open_date ASC NULLS LAST, updated_at DESC"
         );
         res.json({
             success: true,
